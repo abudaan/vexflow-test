@@ -45,44 +45,52 @@ const init1 = async () => {
   return notes;
 }
 
-const init2 = (notes: Vex.Flow.StaveNote[]) => {
-  const div = document.getElementById('app');
+type TypeArgs = {
+  width: number
+  height: number
+  renderer: Vex.Flow.Renderer
+  formatter: Vex.Flow.Formatter
+  context: Vex.Flow.SVGContext
+  notes: Vex.Flow.StaveNote[]
+  divHitArea: HTMLDivElement
+}
 
-  if (div !== null) {
-    const renderer = new Renderer(div, Renderer.Backends.SVG);
-    renderer.resize(500, 500);
-    const context = renderer.getContext();
-    const stave = new Stave(10, 40, 400);
-    stave.addClef('treble').addTimeSignature('4/4');
-    stave.setContext(context).draw();
+const padding = 10;
+const renderScore = ({ width, height, renderer, formatter, context, notes, divHitArea }: TypeArgs) => {
+  renderer.resize(width, height);
+  context.clear();
+  const stave = new Stave(0, 40, width - (padding * 2));
+  stave.addClef('treble').addTimeSignature('4/4');
+  stave.setContext(context).draw();
+  // Create a voice in 4 / 4 and add above notes
+  const voice = new Voice({ num_beats: 4, beat_value: 4 });
+  voice.addTickables(notes);
+  // Format and justify the notes to 400 pixels.
+  formatter.joinVoices([voice]).format([voice], width - (padding * 2));
+  voice.draw(context, stave);
 
+  const notesById: { [id: string]: any } = notes.reduce((acc, val) => {
+    const id: string = val.attrs.id;
+    acc[id] = val;
+    return acc;
+  }, {});
 
-    // Create a voice in 4 / 4 and add above notes
-    const voice = new Voice({ num_beats: 4, beat_value: 4 });
-    voice.addTickables(notes);
-    // Format and justify the notes to 400 pixels.
-    const formatter = new Formatter()
-    formatter.joinVoices([voice]).format([voice], 400);
-    voice.draw(context, stave);
+  // Array.from(divHitArea.children).forEach(c => {
+  //   // console.log(c);
+  //   divHitArea.removeChild(c);
+  // })
 
-    const offset = context.svg.getBoundingClientRect();
+  const offset = context.svg.getBoundingClientRect();
 
-    const notesById: { [id: string]: any } = notes.reduce((acc, val) => {
-      const id: string = val.attrs.id;
-      acc[id] = val;
-      return acc;
-    }, {});
-
-    notes.forEach(note => {
-      const bbox = note.attrs.el.getElementsByClassName('vf-notehead')[0].getBBox();
-      const hit = document.createElement('div');
+  notes.forEach(note => {
+    const bbox = note.attrs.el.getElementsByClassName('vf-notehead')[0].getBBox();
+    const id = note.attrs.id;
+    let hit = document.getElementById(id);
+    if (hit === null) {
+      hit = document.createElement('div');
+      divHitArea.appendChild(hit);
       hit.id = note.attrs.id;
       hit.className = 'hitarea';
-      hit.style.width = `${bbox.width}px`;
-      hit.style.height = `${bbox.height}px`;
-      hit.style.left = `${bbox.x + offset.x}px`;
-      hit.style.top = `${bbox.y + offset.y}px`;
-      document.body.appendChild(hit);
       hit.addEventListener('mousedown', (e: MouseEvent) => {
         const target = e.target as HTMLDivElement;
         const note = notesById[target.id] as Vex.Flow.Note;
@@ -99,7 +107,36 @@ const init2 = (notes: Vex.Flow.StaveNote[]) => {
         // sequencer.processEvent(noteOff);
         sequencer.stopProcessEvents();
       })
+    }
+    hit.style.width = `${bbox.width}px`;
+    hit.style.height = `${bbox.height}px`;
+    hit.style.left = `${bbox.x + offset.left}px`;
+    hit.style.top = `${bbox.y + offset.top}px`;
+  });
+
+}
+
+const init2 = (notes: Vex.Flow.StaveNote[]) => {
+  const div = document.getElementById('app');
+  const divHitArea = document.getElementById('hitareas');
+
+  if (div !== null && divHitArea !== null) {
+    const renderer = new Renderer(div, Renderer.Backends.SVG);
+    const context = renderer.getContext() as Vex.Flow.SVGContext;
+    const formatter = new Formatter()
+    window.addEventListener('resize', () => {
+      renderScore({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        renderer,
+        formatter,
+        context,
+        notes,
+        divHitArea,
+      });
     });
+
+
   }
 }
 
