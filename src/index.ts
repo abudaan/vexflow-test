@@ -107,7 +107,15 @@ const init2 = (notes: Vex.Flow.StaveNote[]) => {
 
 const init = async () => {
   const song = await createSong();
-  const notes = convertToVexFlow(song);
+  const div = document.getElementById('app');
+  const divHitArea = document.getElementById('hitareas') as HTMLDivElement;
+
+  if (div !== null && divHitArea !== null) {
+    const renderer = new Renderer(div, Renderer.Backends.SVG);
+    const context = renderer.getContext() as Vex.Flow.SVGContext;
+    const formatter = new Formatter()
+    const notes = convertToVexFlow({ song, renderer, context, formatter });
+  }
   // song.play();
   // const notes = await init1();
   // init2(notes);
