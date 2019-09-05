@@ -33,13 +33,22 @@ const init1 = async () => {
 
     sequencer.createMidiEvent(960 * 2, 144, 66, 100),
     sequencer.createMidiEvent(960 * 4, 128, 66, 0),
+
+    sequencer.createMidiEvent(960 * 4, 144, 60, 100),
+    sequencer.createMidiEvent(960 * 5, 128, 60, 0),
+
+    sequencer.createMidiEvent(960 * 5, 144, 64, 100),
+    sequencer.createMidiEvent(960 * 6, 128, 64, 0),
+
+    sequencer.createMidiEvent(960 * 6, 144, 66, 100),
+    sequencer.createMidiEvent(960 * 8, 128, 66, 0),
   ];
   part.addEvents(events);
   track.setInstrument(srcName);
   track.addPart(part);
   song.addTrack(track);
   song.update();
-  // song.play();
+  song.play();
   // console.log(song);
   const notes = song.notes.map(note => convertNote(note, song.ppq));
   return notes;
@@ -63,7 +72,7 @@ const renderScore = ({ width, height, renderer, formatter, context, notes, divHi
   stave.addClef('treble').addTimeSignature('4/4');
   stave.setContext(context).draw();
   // Create a voice in 4 / 4 and add above notes
-  const voice = new Voice({ num_beats: 4, beat_value: 4 });
+  const voice = new Voice({ num_beats: 8, beat_value: 4 });
   voice.addTickables(notes);
   // Format and justify the notes to 400 pixels.
   formatter.joinVoices([voice]).format([voice], width - (padding * 2));
