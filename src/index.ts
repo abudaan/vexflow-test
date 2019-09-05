@@ -1,8 +1,6 @@
-import 'jzz';
-import sequencer from 'heartbeat-sequencer';
 import Vex from 'vexflow';
-import { addAssetPack, loadJSON, initSequencer } from './action-utils';
-import { convertNote } from './note-converter';
+import { createSong } from './create-song';
+import { convertToVexFlow } from './note-converter';
 const {
   Renderer,
   Stave,
@@ -10,49 +8,6 @@ const {
   Voice,
   Formatter,
 } = Vex.Flow;
-
-const init1 = async () => {
-  await initSequencer();
-  const song = sequencer.createSong({});
-  const track = sequencer.createTrack('piano');
-  const part = sequencer.createPart();
-  const srcName = 'TP03-Vibraphone';
-  let url = `https://groovy3.heartbeatjs.org/assets/groovy-instruments/mono-mp3-112/${srcName}.mp3.112.json`;
-  if (sequencer.browser === 'firefox') {
-    // url = `/assets/groovy-instruments/mono-22k-q1/${srcName}.json`;
-    url = `https://heartbeatjs.org/groovy-instruments/mono-22k-q1/${srcName}.json`;
-  }
-  const json = await loadJSON(url);
-  await addAssetPack(json);
-  const events = [
-    sequencer.createMidiEvent(0, 144, 60, 100),
-    sequencer.createMidiEvent(960 * 1, 128, 60, 0),
-
-    sequencer.createMidiEvent(960 * 1, 144, 64, 100),
-    sequencer.createMidiEvent(960 * 2, 128, 64, 0),
-
-    sequencer.createMidiEvent(960 * 2, 144, 66, 100),
-    sequencer.createMidiEvent(960 * 4, 128, 66, 0),
-
-    sequencer.createMidiEvent(960 * 4, 144, 60, 100),
-    sequencer.createMidiEvent(960 * 5, 128, 60, 0),
-
-    sequencer.createMidiEvent(960 * 5, 144, 64, 100),
-    sequencer.createMidiEvent(960 * 6, 128, 64, 0),
-
-    sequencer.createMidiEvent(960 * 6, 144, 66, 100),
-    sequencer.createMidiEvent(960 * 8, 128, 66, 0),
-  ];
-  part.addEvents(events);
-  track.setInstrument(srcName);
-  track.addPart(part);
-  song.addTrack(track);
-  song.update();
-  song.play();
-  // console.log(song);
-  const notes = song.notes.map(note => convertNote(note, song.ppq));
-  return notes;
-}
 
 type TypeArgs = {
   width: number
@@ -91,43 +46,43 @@ const renderScore = ({ width, height, renderer, formatter, context, notes, divHi
 
   const offset = context.svg.getBoundingClientRect();
 
-  notes.forEach(note => {
-    const bbox = note.attrs.el.getElementsByClassName('vf-notehead')[0].getBBox();
-    const id = note.attrs.id;
-    let hit = document.getElementById(id);
-    if (hit === null) {
-      hit = document.createElement('div');
-      divHitArea.appendChild(hit);
-      hit.id = note.attrs.id;
-      hit.className = 'hitarea';
-      hit.addEventListener('mousedown', (e: MouseEvent) => {
-        const target = e.target as HTMLDivElement;
-        const note = notesById[target.id] as Vex.Flow.Note;
-        const midiEvent = note.getPlayNote().note.noteOn;
-        const noteOn = sequencer.createMidiEvent(0, 144, midiEvent.data1, midiEvent.data2)
-        sequencer.processEvent(noteOn);
-      })
-      hit.addEventListener('mouseup', (e: MouseEvent) => {
-        // const target = e.target as HTMLDivElement;
-        // const note = notesById[target.id] as Vex.Flow.Note;
-        // const midiEvent = note.getPlayNote().note.noteOff;
-        // const noteOff = sequencer.createMidiEvent(10, 128, midiEvent.data1, 0)
-        // // console.log('up', noteOff);
-        // sequencer.processEvent(noteOff);
-        sequencer.stopProcessEvents();
-      })
-    }
-    hit.style.width = `${bbox.width}px`;
-    hit.style.height = `${bbox.height}px`;
-    hit.style.left = `${bbox.x + offset.left}px`;
-    hit.style.top = `${bbox.y + offset.top}px`;
-  });
+  // notes.forEach(note => {
+  //   const bbox = note.attrs.el.getElementsByClassName('vf-notehead')[0].getBBox();
+  //   const id = note.attrs.id;
+  //   let hit = document.getElementById(id);
+  //   if (hit === null) {
+  //     hit = document.createElement('div');
+  //     divHitArea.appendChild(hit);
+  //     hit.id = note.attrs.id;
+  //     hit.className = 'hitarea';
+  //     hit.addEventListener('mousedown', (e: MouseEvent) => {
+  //       const target = e.target as HTMLDivElement;
+  //       const note = notesById[target.id] as Vex.Flow.Note;
+  //       const midiEvent = note.getPlayNote().note.noteOn;
+  //       const noteOn = sequencer.createMidiEvent(0, 144, midiEvent.data1, midiEvent.data2)
+  //       sequencer.processEvent(noteOn);
+  //     })
+  //     hit.addEventListener('mouseup', (e: MouseEvent) => {
+  //       // const target = e.target as HTMLDivElement;
+  //       // const note = notesById[target.id] as Vex.Flow.Note;
+  //       // const midiEvent = note.getPlayNote().note.noteOff;
+  //       // const noteOff = sequencer.createMidiEvent(10, 128, midiEvent.data1, 0)
+  //       // // console.log('up', noteOff);
+  //       // sequencer.processEvent(noteOff);
+  //       sequencer.stopProcessEvents();
+  //     })
+  //   }
+  //   hit.style.width = `${bbox.width}px`;
+  //   hit.style.height = `${bbox.height}px`;
+  //   hit.style.left = `${bbox.x + offset.left}px`;
+  //   hit.style.top = `${bbox.y + offset.top}px`;
+  // });
 
 }
 
 const init2 = (notes: Vex.Flow.StaveNote[]) => {
   const div = document.getElementById('app');
-  const divHitArea = document.getElementById('hitareas');
+  const divHitArea = document.getElementById('hitareas') as HTMLDivElement;
 
   if (div !== null && divHitArea !== null) {
     const renderer = new Renderer(div, Renderer.Backends.SVG);
@@ -151,8 +106,11 @@ const init2 = (notes: Vex.Flow.StaveNote[]) => {
 
 
 const init = async () => {
-  const notes = await init1();
-  init2(notes);
+  const song = await createSong();
+  const notes = convertToVexFlow(song);
+  // song.play();
+  // const notes = await init1();
+  // init2(notes);
   // const instrument = sequencer.getInstrument('TP03-Vibraphone');
   // document.addEventListener('mouseup', () => {
   //   instrument.allNotesOff();
