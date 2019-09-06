@@ -1,5 +1,5 @@
 import { from, of, forkJoin } from 'rxjs';
-import { map, tap, switchMap, mergeMap, reduce } from 'rxjs/operators';
+import { map, tap, switchMap, mergeMap, reduce, groupBy, toArray } from 'rxjs/operators';
 import { curry } from 'ramda';
 
 
@@ -40,7 +40,7 @@ const convertNote = (ppq: number, note: Heartbeat.MIDINote): [Heartbeat.MIDINote
     octave,
   } = note.note;
   const duration = getDuration(ratio);
-  console.log(note.noteOn, name, octave, ratio, duration);
+  // console.log(note.noteOn, name, octave, ratio, duration);
   const sn = new StaveNote({ clef: 'treble', keys: [`${name}/${octave}`], duration: duration[0] });
   if (duration[1]) {
     sn.addDot(0);
@@ -49,71 +49,23 @@ const convertNote = (ppq: number, note: Heartbeat.MIDINote): [Heartbeat.MIDINote
   return [note, sn];
 }
 
-const convertBars = (barLength: number, data: [Heartbeat.MIDINote, Vex.Flow.StaveNote]) => {
-
-}
-
-type TypeArgs = {
-  song: Heartbeat.Song
-  renderer: Vex.Flow.Renderer
-  formatter: Vex.Flow.Formatter
-  context: Vex.Flow.SVGContext
-}
-
-const convertToVexFlow = ({ song, renderer, context, formatter }: TypeArgs): any => {
+const convertToVexFlow = (song: Heartbeat.Song): Observable => {
   const notes = song.notes;
   const convert = curry<(ppq: number, note: Heartbeat.MIDINote) => [Heartbeat.MIDINote, Vex.Flow.StaveNote]>(convertNote)(song.ppq);
-  const bars = curry<(barLength: number, data: [Heartbeat.MIDINote, Vex.Flow.StaveNote]) => Vex.Flow.StaveNote>(convertBars)(song.ppq * song.denominator);
-  const barLength = song.ppq * song.nominator;
-  from(notes)
+  return from(notes)
     .pipe(
-      // tap(console.log),
       map(convert),
-      // mergeMap(data => of(data)),
-      reduce((acc: [Heartbeat.MIDINote, Vex.Flow.StaveNote][], val: [Heartbeat.MIDINote, Vex.Flow.StaveNote]) => {
+      groupBy(([midiNote, vexFlowNote]) => { return midiNote.noteOn.bar; }),
+      mergeMap((group) => group.pipe(toArray())),
+      // tap(console.log),
+      reduce((acc: [Heartbeat.MIDINote, Vex.Flow.StaveNote][][], val: [Heartbeat.MIDINote, Vex.Flow.StaveNote][]) => {
         acc.push(val);
         return acc;
-      }, []),
-      mergeMap((data: [Heartbeat.MIDINote, Vex.Flow.StaveNote][]) => {
-        //   // console.log(data);
-        const bars: Vex.Flow.Stave[] = [];
-        let bar = -1;
-        let currentTick = 0;
-        let y = 40 + ((bar - 1) * 100);
-        const w = 300;
-        let stave = new Vex.Flow.Stave(0, y, w);
-        stave.addClef('treble').addTimeSignature('4/4');
-        let voice = new Voice({ num_beats: song.nominator, beat_value: song.denominator });
-        let notes: Vex.Flow.StaveNote[] = []
-
-        bars.push(stave);
-        data.forEach(datum => {
-          const [
-            midiNote,
-            note,
-          ] = datum;
-          if (midiNote.noteOn.bar !== bar) {
-            bar = midiNote.noteOn.bar;
-          }
-          // console.log('TICKS', ticks, bar, (bar * barLength), notes.length);
-          if (ticks > (bar * barLength)) {
-            // console.log('BAR', bar, notes);
-            // voice.addTickables([...notes]);
-            // formatter.joinVoices([voice]).format([voice], w);
-            // voice.draw(context, stave);
-            bar++;
-            voice = new Voice({ num_beats: song.nominator, beat_value: song.denominator });
-            notes = [];
-            let y = 40 + ((bar - 1) * 100);
-            stave = new Vex.Flow.Stave(0, y, w);
-            bars.push(stave);
-          }
-          notes.push(note);
-        });
-        return of(bars);
-      }),
+      }, [])
     )
-    .subscribe(console.log)
+  // .subscribe(data => {
+  //   console.log('HIER', data);
+  // });
 }
 
 export {

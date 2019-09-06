@@ -114,7 +114,32 @@ const init = async () => {
     const renderer = new Renderer(div, Renderer.Backends.SVG);
     const context = renderer.getContext() as Vex.Flow.SVGContext;
     const formatter = new Formatter()
-    const notes = convertToVexFlow({ song, renderer, context, formatter });
+    const bars = await convertToVexFlow(song).toPromise();
+
+    const width = 300;
+    let y = 40
+    bars.forEach((notes: [Heartbeat.MIDINote, Vex.Flow.StaveNote][], index: number) => {
+      const alternate = index % 2;
+      const x = alternate === 0 ? 0 : width;
+      let stave;
+      if (alternate === 0 && index !== 0) {
+        stave = new Stave(x, y, width);
+        stave.addClef('treble').addTimeSignature('4/4');
+        stave.setContext(context).draw();
+        y += 80;
+      } else {
+        stave = new Stave(x, y, width);
+        stave.setContext(context).draw();
+      }
+      console.log(index, alternate, y);
+      const voice = new Voice({ num_beats: 4, beat_value: 4 });
+      const staveNotes = notes.map(([midiNote, vexFlowNote]) => vexFlowNote);
+      // console.log(staveNotes[0] instanceof Vex.Flow.StaveNote);
+      // const staveNotes = [new StaveNote({ clef: 'treble', keys: ['C/4'], duration: 'w' })];
+      voice.addTickables(staveNotes);
+      formatter.joinVoices([voice]).format([voice], width);
+      voice.draw(context, stave);
+    });
   }
   // song.play();
   // const notes = await init1();
