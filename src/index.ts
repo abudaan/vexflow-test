@@ -1,3 +1,6 @@
+import { from, of, forkJoin } from 'rxjs';
+import { map, tap, switchMap, mergeMap, reduce, groupBy, toArray } from 'rxjs/operators';
+
 import Vex from 'vexflow';
 import { createSong } from './create-song';
 import { convertToVexFlow } from './note-converter';
@@ -112,33 +115,60 @@ const init = async () => {
 
   if (div !== null && divHitArea !== null) {
     const renderer = new Renderer(div, Renderer.Backends.SVG);
+    renderer.resize(1000, 1000);
     const context = renderer.getContext() as Vex.Flow.SVGContext;
     const formatter = new Formatter()
     const bars = await convertToVexFlow(song).toPromise();
 
-    const width = 300;
-    let y = 40
-    bars.forEach((notes: [Heartbeat.MIDINote, Vex.Flow.StaveNote][], index: number) => {
-      const alternate = index % 2;
-      const x = alternate === 0 ? 0 : width;
-      let stave;
-      if (alternate === 0 && index !== 0) {
-        stave = new Stave(x, y, width);
-        stave.addClef('treble').addTimeSignature('4/4');
-        stave.setContext(context).draw();
-        y += 80;
-      } else {
-        stave = new Stave(x, y, width);
-        stave.setContext(context).draw();
+    const width = 200;
+    let y = 40;
+    bars.forEach((notes: [Heartbeat.MIDINote, []][], index: number) => {
+      // console.log('NOTES', index, notes);
+      if (index < 2) {
+        const alternate = index % 4;
+        let x = 0;
+        let stave;
+        if (alternate === 0) {
+          if (index !== 0) {
+            y += 80;
+          }
+          stave = new Stave(x, y, width + 50);
+          stave.addClef('treble').addTimeSignature('4/4');
+          stave.setContext(context).draw();
+        } else {
+          x = 50 + (alternate * width);
+          stave = new Stave(x, y, width);
+          stave.setContext(context).draw();
+        }
+        // console.log(index, alternate, y);
+        const voice = new Voice({ num_beats: 4, beat_value: 4 });
+        // const staveNoteData = notes.map(([midiNote, data]) => data);
+        const staveNotes = [];
+        notes.forEach((data, i) => {
+          // console.log(data);
+          const keys: string[] = [];
+          data.forEach((d, j) => {
+            // console.log(i, j, d);
+            keys.push(d[1][2]);
+          })
+          const duration = data[0][1][0];
+          const addDot = data[0][1][1];
+          console.log(keys, duration, addDot);
+          // const sn = new StaveNote({ clef: 'treble', keys, duration });
+          // console.log(duration);
+          const sn = new StaveNote({ clef: 'treble', keys, duration });
+          if (addDot) {
+            sn.addDot(0);
+          }
+          // if (i < 8) {
+          staveNotes.push(sn);
+          // }
+        });
+        console.log(staveNotes);
+        voice.addTickables(staveNotes);
+        formatter.joinVoices([voice]).format([voice], width);
+        voice.draw(context, stave);
       }
-      console.log(index, alternate, y);
-      const voice = new Voice({ num_beats: 4, beat_value: 4 });
-      const staveNotes = notes.map(([midiNote, vexFlowNote]) => vexFlowNote);
-      // console.log(staveNotes[0] instanceof Vex.Flow.StaveNote);
-      // const staveNotes = [new StaveNote({ clef: 'treble', keys: ['C/4'], duration: 'w' })];
-      voice.addTickables(staveNotes);
-      formatter.joinVoices([voice]).format([voice], width);
-      voice.draw(context, stave);
     });
   }
   // song.play();

@@ -13,7 +13,10 @@ const {
 } = Vex.Flow;
 
 const getDuration = (roundedTicks: number): [string, boolean] => {
+  console.log(roundedTicks);
   switch (roundedTicks) {
+    case 0.25:
+      return ['16', false];
     case 0.5:
       return ['8', false];
     case 0.75:
@@ -28,7 +31,7 @@ const getDuration = (roundedTicks: number): [string, boolean] => {
 };
 
 const round = (float: number): number => {
-  const r = Math.round(float * 10) / 10;
+  const r = Math.round(float * 100) / 100;
   return r;
 }
 
@@ -46,7 +49,8 @@ const convertNote = (ppq: number, note: Heartbeat.MIDINote): [Heartbeat.MIDINote
     sn.addDot(0);
   }
   sn.setPlayNote({ noteId: note.id });
-  return [note, sn];
+  duration.push(`${name.toLowerCase()}/${octave}`)
+  return [note, duration];
 }
 
 const convertToVexFlow = (song: Heartbeat.Song): Observable => {
@@ -55,17 +59,30 @@ const convertToVexFlow = (song: Heartbeat.Song): Observable => {
   return from(notes)
     .pipe(
       map(convert),
-      groupBy(([midiNote, vexFlowNote]) => { return midiNote.noteOn.bar; }),
-      mergeMap((group) => group.pipe(toArray())),
       // tap(console.log),
-      reduce((acc: [Heartbeat.MIDINote, Vex.Flow.StaveNote][][], val: [Heartbeat.MIDINote, Vex.Flow.StaveNote][]) => {
+      groupBy(([midiNote, vexFlowNote]) => midiNote.noteOn.bar),
+      mergeMap((group) =>
+        group.pipe(
+          toArray(),
+          mergeMap(data => {
+            return from(data)
+              .pipe(
+                groupBy(([midiNote, vexFlowNote]) => midiNote.noteOn.ticks),
+                mergeMap((group) => group.pipe(toArray())),
+                // tap(console.log),
+              )
+          }),
+          reduce((acc: [Heartbeat.MIDINote, Vex.Flow.StaveNote][][], val: [Heartbeat.MIDINote, Vex.Flow.StaveNote][]) => {
+            acc.push(val);
+            return acc;
+          }, [])
+        )
+      ),
+      reduce((acc: [Heartbeat.MIDINote, Vex.Flow.StaveNote][][][], val: [Heartbeat.MIDINote, Vex.Flow.StaveNote][][]) => {
         acc.push(val);
         return acc;
       }, [])
     )
-  // .subscribe(data => {
-  //   console.log('HIER', data);
-  // });
 }
 
 export {
