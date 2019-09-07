@@ -1,5 +1,5 @@
 import { from, of, forkJoin } from 'rxjs';
-import { map, tap, switchMap, mergeMap, reduce, groupBy, toArray } from 'rxjs/operators';
+import { map, filter, tap, switchMap, mergeMap, reduce, groupBy, toArray } from 'rxjs/operators';
 import { curry } from 'ramda';
 
 
@@ -12,8 +12,13 @@ const {
   Formatter,
 } = Vex.Flow;
 
+
+const roundToStep = (number: number, increment: number, offset: number): number => {
+  return Math.ceil((number - offset) / increment) * increment + offset;
+}
+
 const getDuration = (roundedTicks: number): [string, boolean] => {
-  console.log(roundedTicks);
+  // console.log(roundedTicks);
   switch (roundedTicks) {
     case 0.25:
       return ['16', false];
@@ -36,7 +41,7 @@ const round = (float: number): number => {
 }
 
 const convertNote = (ppq: number, note: Heartbeat.MIDINote): [Heartbeat.MIDINote, Vex.Flow.StaveNote] => {
-  // console.log(note);
+  console.log(note.durationTicks, roundToStep(note.durationTicks, 480 / 32, 0));
   const ratio = round(note.durationTicks / ppq);
   const {
     name,
@@ -58,6 +63,7 @@ const convertToVexFlow = (song: Heartbeat.Song): Observable => {
   const convert = curry<(ppq: number, note: Heartbeat.MIDINote) => [Heartbeat.MIDINote, Vex.Flow.StaveNote]>(convertNote)(song.ppq);
   return from(notes)
     .pipe(
+      filter(note => isNaN(note.durationTicks) === false),
       map(convert),
       // tap(console.log),
       groupBy(([midiNote, vexFlowNote]) => midiNote.noteOn.bar),
