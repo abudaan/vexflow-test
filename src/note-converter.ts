@@ -12,7 +12,7 @@ const mapping: { [id: string]: string } = {
   '2': 'h',
 };
 
-const convertNote = (note: Heartbeat.MIDINote, ppq: number): Vex.Flow.StaveNote => {
+const convertNote = (note: Heartbeat.MIDINote, ppq: number): [Vex.Flow.StaveNote, Heartbeat.MIDINote] => {
   const ratio = note.durationTicks / ppq;
   const {
     name,
@@ -22,7 +22,7 @@ const convertNote = (note: Heartbeat.MIDINote, ppq: number): Vex.Flow.StaveNote 
   // console.log(name, octave, ratio, duration);
   const sn = new StaveNote({ clef: 'treble', keys: [`${name}/${octave}`], duration });
   sn.setPlayNote({ note });
-  return sn;
+  return [sn, note];
 }
 
 export {
