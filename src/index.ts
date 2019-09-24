@@ -26,11 +26,11 @@ const init1 = async () => {
   // const srcName = 'TP03-Vibraphone';
   const srcName = 'TP00-PianoStereo';
   // let url = `https://groovy3.heartbeatjs.org/assets/groovy-instruments/mono-mp3-112/${srcName}.mp3.112.json`;
-  let url = `/assets/${srcName}.mp3.json`;
+  let url = `assets/${srcName}.mp3.json`;
   if (sequencer.browser === 'firefox') {
     // url = `/assets/groovy-instruments/mono-22k-q1/${srcName}.json`;
     // url = `https://heartbeatjs.org/groovy-instruments/mono-22k-q1/${srcName}.json`;
-    url = `/assets/${srcName}.ogg.json`;
+    url = `assets/${srcName}.ogg.json`;
   }
   const json = await loadJSON(url);
   await addAssetPack(json);
