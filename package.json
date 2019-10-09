@@ -6,7 +6,7 @@
   "dependencies": {
     "fetch-helpers": "^9.0.0",
     "glamor": "^2.20.40",
-    "heartbeat-sequencer": "file:heartbeat",
+    "heartbeat-sequencer": "file:../heartbeat/",
     "jzz": "^0.7.9",
     "ramda": "^0.26.1",
     "rxjs": "^6.5.2",
