@@ -35,6 +35,7 @@ const getDuration = (roundedTicks: number): [string, boolean] => {
   }
 };
 
+<<<<<<< HEAD
 const round = (float: number): number => {
   const r = Math.round(float * 100) / 100;
   return r;
@@ -43,10 +44,15 @@ const round = (float: number): number => {
 const convertNote = (ppq: number, note: Heartbeat.MIDINote): [Heartbeat.MIDINote, Vex.Flow.StaveNote] => {
   console.log(note.durationTicks, roundToStep(note.durationTicks, 480 / 32, 0));
   const ratio = round(note.durationTicks / ppq);
+=======
+const convertNote = (note: Heartbeat.MIDINote, ppq: number): [Vex.Flow.StaveNote, Heartbeat.MIDINote] => {
+  const ratio = note.durationTicks / ppq;
+>>>>>>> 16b6c40fdb4bafc4ee1aa49dae005f31edda1265
   const {
     name,
     octave,
   } = note.note;
+<<<<<<< HEAD
   const duration = getDuration(ratio);
   // console.log(note.noteOn, name, octave, ratio, duration);
   const sn = new StaveNote({ clef: 'treble', keys: [`${name}/${octave}`], duration: duration[0] });
@@ -89,6 +95,13 @@ const convertToVexFlow = (song: Heartbeat.Song): Observable => {
         return acc;
       }, [])
     )
+=======
+  const duration = mapping[ratio.toString()];
+  // console.log(name, octave, ratio, duration);
+  const sn = new StaveNote({ clef: 'treble', keys: [`${name}/${octave}`], duration });
+  sn.setPlayNote({ note });
+  return [sn, note];
+>>>>>>> 16b6c40fdb4bafc4ee1aa49dae005f31edda1265
 }
 
 export {
