@@ -120,7 +120,6 @@ const renderScore = ({ width, height, renderer, formatter, context, notes, divHi
 
   const offset = context.svg.getBoundingClientRect();
 
-<<<<<<< HEAD
   // notes.forEach(note => {
   //   const bbox = note.attrs.el.getElementsByClassName('vf-notehead')[0].getBBox();
   //   const id = note.attrs.id;
@@ -152,46 +151,6 @@ const renderScore = ({ width, height, renderer, formatter, context, notes, divHi
   //   hit.style.left = `${bbox.x + offset.left}px`;
   //   hit.style.top = `${bbox.y + offset.top}px`;
   // });
-=======
-  notes.forEach(note => {
-    const bbox = note.attrs.el.getElementsByClassName('vf-notehead')[0].getBBox();
-    const id = note.attrs.id;
-    let hit = document.getElementById(id);
-    if (hit === null) {
-      hit = document.createElement('div');
-      divHitArea.appendChild(hit);
-      hit.id = note.attrs.id;
-      hit.className = 'hitarea';
-      hit.addEventListener('mousedown', (e: MouseEvent) => {
-        const target = e.target as HTMLDivElement;
-        const note = notesById[target.id] as Vex.Flow.Note;
-        const midiEvent = note.getPlayNote().note.noteOn;
-        const noteOn = sequencer.createMidiEvent(0, 144, midiEvent.data1, midiEvent.data2)
-        // const instrument = midiEvent.track.instrument;
-        // console.log(instrument);
-        // instrument.processEvent(noteOn);
-        sequencer.processEvent(noteOn, 'TP00-PianoStereo');
-        colorStaveNote(note.attrs.el, 'red');
-        showToolTip(hit, midiEvent);
-      })
-      hit.addEventListener('mouseup', (e: MouseEvent) => {
-        // const target = e.target as HTMLDivElement;
-        // const note = notesById[target.id] as Vex.Flow.Note;
-        // const midiEvent = note.getPlayNote().note.noteOff;
-        // const noteOff = sequencer.createMidiEvent(10, 128, midiEvent.data1, 0)
-        // // console.log('up', noteOff);
-        // sequencer.processEvent(noteOff);
-        sequencer.stopProcessEvents();
-        colorStaveNote(note.attrs.el, 'black');
-        hideToolTip(hit);
-      })
-    }
-    hit.style.width = `${bbox.width}px`;
-    hit.style.height = `${bbox.height}px`;
-    hit.style.left = `${bbox.x + offset.left}px`;
-    hit.style.top = `${bbox.y + offset.top}px`;
-  });
->>>>>>> 16b6c40fdb4bafc4ee1aa49dae005f31edda1265
 
 }
 
@@ -239,7 +198,6 @@ const colorStaveNote = (el, color) => {
 }
 
 const init = async () => {
-<<<<<<< HEAD
   const song = await createSong();
   const div = document.getElementById('app');
   const divHitArea = document.getElementById('hitareas') as HTMLDivElement;
@@ -305,32 +263,6 @@ const init = async () => {
   // song.play();
   // const notes = await init1();
   // init2(notes);
-=======
-  const notes = await init1();
-  init2(notes);
-
-  const o = {};
-  notes.forEach((n) => {
-    const [staveNote, midiNote] = n;
-    // console.log(staveNote);
-    o[midiNote.id] = staveNote
-  });
-  console.log(o);
-  song.addEventListener('event', 'type = NOTE_ON', (event) => {
-    const noteId = event.midiNote.id;
-    // o[noteId].setStyle({ fillStyle: "red", strokeStyle: "red" });
-    const el = o[noteId].attrs.el;
-    colorStaveNote(el, 'red');
-  });
-
-  song.addEventListener('event', 'type = NOTE_OFF', (event) => {
-    const noteId = event.midiNote.id;
-    const el = o[noteId].attrs.el;
-    colorStaveNote(el, 'black');
-  });
-
-
->>>>>>> 16b6c40fdb4bafc4ee1aa49dae005f31edda1265
   // const instrument = sequencer.getInstrument('TP03-Vibraphone');
   // document.addEventListener('mouseup', () => {
   //   instrument.allNotesOff();
