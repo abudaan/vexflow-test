@@ -9,7 +9,7 @@ const {
 } = Vex.Flow;
 let song: Heartbeat.Song;
 
-const createSong = async () => {
+const createSong = async (ppq: number, numerator: number, denominator: number) => {
   await sequencer.ready();
   song = sequencer.createSong({ bars: 1 });
   const track = sequencer.createTrack('piano');
@@ -27,10 +27,10 @@ const createSong = async () => {
   // await addAssetPack(json);
   const events = [
     sequencer.createMidiEvent(0, 144, 60, 100),
-    sequencer.createMidiEvent(960 * 1, 128, 60, 0),
+    sequencer.createMidiEvent(ppq * 1, 128, 60, 0),
 
-    sequencer.createMidiEvent(960 * 1, 144, 64, 100),
-    sequencer.createMidiEvent(960 * 2, 128, 64, 0),
+    sequencer.createMidiEvent(ppq * 1, 144, 64, 100),
+    sequencer.createMidiEvent(ppq * 2, 128, 64, 0),
 
     sequencer.createMidiEvent(960 * 2, 144, 67, 100),
     sequencer.createMidiEvent(960 * 4, 128, 67, 0),
@@ -120,7 +120,7 @@ const init = async () => {
   const btnStop = document.getElementById('stop') as HTMLButtonElement;
 
   if (div !== null && divHitArea !== null) {
-    const song = await createSong();
+    const song = await createSong(ppq, numerator, denominator);
     const renderer = new Renderer(div, Renderer.Backends.SVG);
     const context = renderer.getContext() as Vex.Flow.SVGContext;
     const formatter = new Formatter();
@@ -145,7 +145,7 @@ const init = async () => {
       });
       const offset = context.svg.getBoundingClientRect();
       [svgElementById, hitAreaById] = addInteractivity(staveNotes, divHitArea, offset, {
-        onMouseDown: (id: string) => {
+        click: (id: string) => {
           console.log('add 1', id);
         }
       });
@@ -154,11 +154,8 @@ const init = async () => {
 
     render();
     // addListeners(noteMapping, svgElementById);
-    Object.values(hitAreaById)[0].onclick = (id, div, note) => {
-      console.log(id, div, note);
-    }
-    Object.values(hitAreaById)[1].addEventListener('click', (id, div, note) => {
-      console.log(id, div, note);
+    Object.values(hitAreaById)[1].addEventListener('click', (e: MouseEvent) => {
+      console.log(e);
     });
 
     song.notes.forEach((n) => {
