@@ -63,6 +63,7 @@ export type NoteMapping = {
 }
 
 export type SVGElementById = { [id: string]: SVGGElement }
+export type HitAreaById = { [id: string]: HTMLDivElement }
 
 
 export const convertMIDINoteToStaveNote = (
@@ -97,44 +98,49 @@ export const convertMIDINoteToStaveNote = (
   return [staveNotes, notesMap];
 }
 
+export type HitAreaListener = (id: string, hitElement: HTMLDivElement, staveNote: Vex.Flow.StaveNote) => void;
 
 export const addInteractivity = (
   notes: Vex.Flow.StaveNote[],
   divHitArea: HTMLDivElement,
   offset: { left: number, top: number },
-  onMouseDown?: (id: string) => void,
-  onMouseUp?: (id: string) => void,
-) => {
+  listeners?: {
+    [id: string]: HitAreaListener
+  }
+): [SVGElementById, HitAreaById] => {
   while (divHitArea.firstChild) {
     divHitArea.firstChild.remove();
   }
   const svgElementById: SVGElementById = {};
+  const hitAreaById: HitAreaById = {};
   notes.forEach(note => {
     const bbox = note.attrs.el.getElementsByClassName('vf-notehead')[0].getBBox();
     const id = note.attrs.id;
-    let hit = document.getElementById(id);
+    let hit: HTMLDivElement | null = document.getElementById(id) as HTMLDivElement;
     if (hit === null) {
       hit = document.createElement('div');
       divHitArea.appendChild(hit);
       hit.id = note.attrs.id;
       hit.className = 'hitarea';
+      if (typeof listeners !== 'undefined') {
+        Object.entries(listeners).forEach(([type, callback]: [string, HitAreaListener]) => {
+          if (hit !== null) {
+            hit[type.toLowerCase()] = () => {
+              callback(id, hit, note);
+            };
+          }
+        });
+      }
     }
     hit.style.width = `${bbox.width}px`;
     hit.style.height = `${bbox.height}px`;
     hit.style.left = `${bbox.x + offset.left}px`;
     hit.style.top = `${bbox.y + offset.top}px`;
 
-    if (onMouseDown) {
-      hit.addEventListener('mousedown', () => onMouseDown(id))
-    }
-
-    if (onMouseUp) {
-      hit.addEventListener('mouseup', () => onMouseUp(id))
-    }
-
     svgElementById[hit.id] = note.attrs.el as SVGGElement;
+    hitAreaById[hit.id] = hit;
   });
-  return svgElementById;
+  return [svgElementById, hitAreaById];
 }
 
 

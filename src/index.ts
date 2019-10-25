@@ -1,6 +1,6 @@
 import sequencer from 'heartbeat-sequencer';
 import Vex from 'vexflow';
-import { renderScore, addInteractivity, NoteMapping, SVGElementById } from './create-score';
+import { renderScore, addInteractivity, NoteMapping, SVGElementById, HitAreaListener, HitAreaById } from './create-score';
 import { loadJSON, addAssetPack } from './action-utils';
 
 const {
@@ -126,7 +126,8 @@ const init = async () => {
     const formatter = new Formatter();
     let staveNotes: Vex.Flow.StaveNote[];
     let noteMapping: NoteMapping;
-    let svgElementById: SVGElementById;
+    let svgElementById: SVGElementById = {};
+    let hitAreaById: HitAreaById = {};
 
     const render = () => {
       [staveNotes, noteMapping] = renderScore({
@@ -143,12 +144,22 @@ const init = async () => {
         midiNotes: song.notes,
       });
       const offset = context.svg.getBoundingClientRect();
-      svgElementById = addInteractivity(staveNotes, divHitArea, offset);
+      [svgElementById, hitAreaById] = addInteractivity(staveNotes, divHitArea, offset, {
+        onMouseDown: (id: string) => {
+          console.log('add 1', id);
+        }
+      });
       // console.log(svgElementById, staveNotes, noteMapping);
     }
 
     render();
-    addListeners(noteMapping, svgElementById);
+    // addListeners(noteMapping, svgElementById);
+    Object.values(hitAreaById)[0].onclick = (id, div, note) => {
+      console.log(id, div, note);
+    }
+    Object.values(hitAreaById)[1].addEventListener('click', (id, div, note) => {
+      console.log(id, div, note);
+    });
 
     song.notes.forEach((n) => {
       song.addEventListener('event', 'type = NOTE_ON', (event) => {
