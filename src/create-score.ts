@@ -58,8 +58,8 @@ const getDuration = (roundedTicks: number): string => {
 };
 
 export type NoteMapping = {
-  staveToMIDI: { [id: string]: string }
-  MIDIToStave: { [id: string]: string }
+  midiNoteByStaveNoteId: { [id: string]: Heartbeat.MIDINote }
+  staveNoteByMIDINoteId: { [id: string]: Vex.Flow.StaveNote }
 }
 
 export type SVGElementById = { [id: string]: SVGGElement }
@@ -73,7 +73,7 @@ export const convertMIDINoteToStaveNote = (
 ): [Vex.Flow.StaveNote[], NoteMapping] => {
   const staveNotes: Vex.Flow.StaveNote[] = [];
   const notesMap: NoteMapping = {
-    staveToMIDI: {}, MIDIToStave: {}
+    midiNoteByStaveNoteId: {}, staveNoteByMIDINoteId: {}
   };
   notes
     .filter(note => isNaN(note.durationTicks) === false)
@@ -90,9 +90,10 @@ export const convertMIDINoteToStaveNote = (
       if (duration.indexOf('d') !== -1) {
         sn.addDot(0);
       }
+      sn.setPlayNote(note);
       staveNotes.push(sn);
-      notesMap.staveToMIDI[sn.attrs.id] = note.id;
-      notesMap.MIDIToStave[note.id] = sn.attrs.id;
+      notesMap.midiNoteByStaveNoteId[sn.attrs.id] = note;
+      notesMap.staveNoteByMIDINoteId[note.id] = sn;
     });
 
   return [staveNotes, notesMap];
@@ -104,9 +105,6 @@ export const addInteractivity = (
   notes: Vex.Flow.StaveNote[],
   divHitArea: HTMLDivElement,
   offset: { left: number, top: number },
-  listeners?: {
-    [id: string]: HitAreaListener
-  }
 ): [SVGElementById, HitAreaById] => {
   while (divHitArea.firstChild) {
     divHitArea.firstChild.remove();
@@ -122,15 +120,6 @@ export const addInteractivity = (
       divHitArea.appendChild(hit);
       hit.id = note.attrs.id;
       hit.className = 'hitarea';
-      if (typeof listeners !== 'undefined') {
-        Object.entries(listeners).forEach(([type, callback]: [string, HitAreaListener]) => {
-          if (hit !== null) {
-            hit[type.toLowerCase()] = () => {
-              callback(id, hit, note);
-            };
-          }
-        });
-      }
     }
     hit.style.width = `${bbox.width}px`;
     hit.style.height = `${bbox.height}px`;
@@ -161,12 +150,6 @@ export const renderScore = ({
   // Format and justify the notes to 400 pixels.
   formatter.joinVoices([voice]).format([voice], width - (padding * 2));
   voice.draw(context, stave);
-
-  // const staveNotesById: { [id: string]: Vex.Flow.StaveNote } = staveNotes.reduce((acc: { [id: string]: Vex.Flow.StaveNote }, val) => {
-  //   const id: string = val.attrs.id;
-  //   acc[id] = val;
-  //   return acc;
-  // }, {});
 
   return [staveNotes, notesMap];
 }

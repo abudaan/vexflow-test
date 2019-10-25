@@ -24,7 +24,7 @@ const createSong = async (ppq: number, numerator: number, denominator: number) =
     url = `assets/${srcName}.ogg.json`;
   }
   const json = await loadJSON(url);
-  // await addAssetPack(json);
+  await addAssetPack(json);
   const events = [
     sequencer.createMidiEvent(0, 144, 60, 100),
     sequencer.createMidiEvent(ppq * 1, 128, 60, 0),
@@ -64,37 +64,37 @@ const colorStaveNote = (el: SVGGElement, color: string) => {
   }
 }
 
-const addListeners = (noteMapping: NoteMapping, svgElementById: SVGElementById) => {
-  const hitAreas = document.getElementsByClassName('hitarea');
-  Array.from(hitAreas).forEach((hit: HTMLDivElement) => {
+const addListeners = (hitAreas: HitAreaById, noteMapping: NoteMapping) => {
+  Object.entries(hitAreas).forEach(([id, hit]: [string, HTMLDivElement]) => {
     hit.addEventListener('mousedown', (e: MouseEvent) => {
       const target = e.target as HTMLDivElement;
-      const note = noteMapping.MIDIToStave[target.id];
-      const midiEvent = note.noteOn;
+      const midiNote = noteMapping.midiNoteByStaveNoteId[target.id];
+      const staveNote = noteMapping.staveNoteByMIDINoteId[midiNote.id];
+      const midiEvent = midiNote.noteOn;
       const noteOn = sequencer.createMidiEvent(0, 144, midiEvent.data1, midiEvent.data2)
       // const instrument = midiEvent.track.instrument;
       // console.log(instrument);
       // instrument.processEvent(noteOn);
       sequencer.processEvent(noteOn, 'TP00-PianoStereo');
-      colorStaveNote(note.attrs.el, 'red');
+      colorStaveNote(staveNote.attrs.el, 'red');
       showToolTip(hit, midiEvent);
     })
     hit.addEventListener('mouseup', (e: MouseEvent) => {
-      // const target = e.target as HTMLDivElement;
-      // const note = notesById[target.id] as Vex.Flow.Note;
-      // const midiEvent = note.getPlayNote().note.noteOff;
+      const target = e.target as HTMLDivElement;
+      const midiNote = noteMapping.midiNoteByStaveNoteId[target.id];
+      const staveNote = noteMapping.staveNoteByMIDINoteId[midiNote.id];
+      // const midiEvent = midiNote.noteOn;
       // const noteOff = sequencer.createMidiEvent(10, 128, midiEvent.data1, 0)
-      // // console.log('up', noteOff);
-      // sequencer.processEvent(noteOff);
+      // sequencer.processEvent(noteOff, '');
       sequencer.stopProcessEvents();
-      colorStaveNote(note.attrs.el, 'black');
+      colorStaveNote(staveNote.attrs.el, 'black');
       hideToolTip(hit);
     });
-  }
+  });
 };
 
 const toolTip = document.getElementById('tooltip');
-const showToolTip = (hit: HTMLDivElement, data: any) => {
+const showToolTip = (hit: HTMLDivElement, data: Heartbeat.MIDIEvent) => {
   if (toolTip !== null) {
     toolTip.style.display = 'block';
     toolTip.style.left = hit.style.left;
@@ -125,7 +125,10 @@ const init = async () => {
     const context = renderer.getContext() as Vex.Flow.SVGContext;
     const formatter = new Formatter();
     let staveNotes: Vex.Flow.StaveNote[];
-    let noteMapping: NoteMapping;
+    let noteMapping: NoteMapping = {
+      midiNoteByStaveNoteId: {},
+      staveNoteByMIDINoteId: {},
+    };
     let svgElementById: SVGElementById = {};
     let hitAreaById: HitAreaById = {};
 
@@ -144,32 +147,23 @@ const init = async () => {
         midiNotes: song.notes,
       });
       const offset = context.svg.getBoundingClientRect();
-      [svgElementById, hitAreaById] = addInteractivity(staveNotes, divHitArea, offset, {
-        click: (id: string) => {
-          console.log('add 1', id);
-        }
-      });
+      [svgElementById, hitAreaById] = addInteractivity(staveNotes, divHitArea, offset);
       // console.log(svgElementById, staveNotes, noteMapping);
     }
 
     render();
-    // addListeners(noteMapping, svgElementById);
-    Object.values(hitAreaById)[1].addEventListener('click', (e: MouseEvent) => {
-      console.log(e);
-    });
+    addListeners(hitAreaById, noteMapping);
 
     song.notes.forEach((n) => {
       song.addEventListener('event', 'type = NOTE_ON', (event) => {
         const noteId = event.midiNote.id;
-        const id = `${noteMapping.MIDIToStave[noteId]}`;
-        const el = svgElementById[id];
+        const el = noteMapping.staveNoteByMIDINoteId[noteId].attrs.el;
         colorStaveNote(el, 'red');
       });
 
       song.addEventListener('event', 'type = NOTE_OFF', (event) => {
         const noteId = event.midiNote.id;
-        const id = `${noteMapping.MIDIToStave[noteId]}`;
-        const el = svgElementById[id];
+        const el = noteMapping.staveNoteByMIDINoteId[noteId].attrs.el;
         colorStaveNote(el, 'black');
       });
     });
