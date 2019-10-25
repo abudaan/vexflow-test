@@ -1,28 +1,16 @@
-import { from, of, forkJoin } from 'rxjs';
-import { map, tap, switchMap, mergeMap, reduce, groupBy, toArray } from 'rxjs/operators';
-
+import sequencer from 'heartbeat-sequencer';
 import Vex from 'vexflow';
-import { createSong } from './create-song';
-import { convertToVexFlow } from './note-converter';
+import { renderScore, addInteractivity, NoteMapping, SVGElementById } from './create-score';
+import { loadJSON, addAssetPack } from './action-utils';
+
 const {
   Renderer,
-  Stave,
-  StaveNote,
-  Voice,
   Formatter,
 } = Vex.Flow;
+let song: Heartbeat.Song;
 
-<<<<<<< HEAD
-=======
-const song;
-
-const init1 = async () => {
-  const btnPlay = document.getElementById('play');
-  const btnStop = document.getElementById('stop');
-  btnPlay.disabled = true;
-  btnStop.disabled = true;
-
-  await initSequencer();
+const createSong = async () => {
+  await sequencer.ready();
   song = sequencer.createSong({ bars: 1 });
   const track = sequencer.createTrack('piano');
   const part = sequencer.createPart();
@@ -36,7 +24,7 @@ const init1 = async () => {
     url = `assets/${srcName}.ogg.json`;
   }
   const json = await loadJSON(url);
-  await addAssetPack(json);
+  // await addAssetPack(json);
   const events = [
     sequencer.createMidiEvent(0, 144, 60, 100),
     sequencer.createMidiEvent(960 * 1, 128, 60, 0),
@@ -52,289 +40,155 @@ const init1 = async () => {
   track.addPart(part);
   song.addTrack(track);
   song.update();
-  song.addEventListener('stop', () => {
-    btnPlay.innerHTML = 'play';
-  });
-  song.addEventListener('play', () => {
-    btnPlay.innerHTML = 'pause';
-  });
-  song.addEventListener('end', () => {
-    btnPlay.innerHTML = 'play';
-  });
+  return song;
+}
 
-  btnPlay.disabled = false;
-  btnStop.disabled = false;
 
-  btnPlay.addEventListener('click', () => {
-    if (song.playing) {
-      // btnPlay.innerHTML = 'play';
-      song.pause();
-    } else {
-      // btnPlay.innerHTML = 'pause';
-      song.play();
+const colorStaveNote = (el: SVGGElement, color: string) => {
+  const stems = el.getElementsByClassName('vf-stem');
+  const noteheads = el.getElementsByClassName('vf-notehead');
+  // console.log(stem, notehead);
+  for (let i = 0; i < stems.length; i++) {
+    const stem = stems[i];
+    if (stem !== null && stem.firstChild !== null) {
+      (stem.firstChild as SVGGElement).setAttribute('fill', color);
+      (stem.firstChild as SVGGElement).setAttribute('stroke', color);
     }
-  });
-  btnStop.addEventListener('click', () => { song.stop() });
-
-  // song.play();
-  // console.log(song);
-  const notes = song.notes.map(note => convertNote(note, song.ppq));
-  return notes;
-}
-
->>>>>>> 16b6c40fdb4bafc4ee1aa49dae005f31edda1265
-type TypeArgs = {
-  width: number
-  height: number
-  renderer: Vex.Flow.Renderer
-  formatter: Vex.Flow.Formatter
-  context: Vex.Flow.SVGContext
-  notes: Vex.Flow.StaveNote[]
-  divHitArea: HTMLDivElement
-}
-
-const padding = 10;
-const renderScore = ({ width, height, renderer, formatter, context, notes, divHitArea }: TypeArgs) => {
-  renderer.resize(width, height);
-  context.clear();
-  const stave = new Stave(0, 40, width - (padding * 2));
-  stave.addClef('treble').addTimeSignature('4/4');
-  stave.setContext(context).draw();
-  // Create a voice in 4 / 4 and add above notes
-  const voice = new Voice({ num_beats: 8, beat_value: 4 });
-  voice.addTickables(notes);
-  // Format and justify the notes to 400 pixels.
-  formatter.joinVoices([voice]).format([voice], width - (padding * 2));
-  voice.draw(context, stave);
-
-  const notesById: { [id: string]: any } = notes.reduce((acc, val) => {
-    const id: string = val.attrs.id;
-    acc[id] = val;
-    return acc;
-  }, {});
-
-  // Array.from(divHitArea.children).forEach(c => {
-  //   // console.log(c);
-  //   divHitArea.removeChild(c);
-  // })
-
-  const offset = context.svg.getBoundingClientRect();
-
-<<<<<<< HEAD
-  // notes.forEach(note => {
-  //   const bbox = note.attrs.el.getElementsByClassName('vf-notehead')[0].getBBox();
-  //   const id = note.attrs.id;
-  //   let hit = document.getElementById(id);
-  //   if (hit === null) {
-  //     hit = document.createElement('div');
-  //     divHitArea.appendChild(hit);
-  //     hit.id = note.attrs.id;
-  //     hit.className = 'hitarea';
-  //     hit.addEventListener('mousedown', (e: MouseEvent) => {
-  //       const target = e.target as HTMLDivElement;
-  //       const note = notesById[target.id] as Vex.Flow.Note;
-  //       const midiEvent = note.getPlayNote().note.noteOn;
-  //       const noteOn = sequencer.createMidiEvent(0, 144, midiEvent.data1, midiEvent.data2)
-  //       sequencer.processEvent(noteOn);
-  //     })
-  //     hit.addEventListener('mouseup', (e: MouseEvent) => {
-  //       // const target = e.target as HTMLDivElement;
-  //       // const note = notesById[target.id] as Vex.Flow.Note;
-  //       // const midiEvent = note.getPlayNote().note.noteOff;
-  //       // const noteOff = sequencer.createMidiEvent(10, 128, midiEvent.data1, 0)
-  //       // // console.log('up', noteOff);
-  //       // sequencer.processEvent(noteOff);
-  //       sequencer.stopProcessEvents();
-  //     })
-  //   }
-  //   hit.style.width = `${bbox.width}px`;
-  //   hit.style.height = `${bbox.height}px`;
-  //   hit.style.left = `${bbox.x + offset.left}px`;
-  //   hit.style.top = `${bbox.y + offset.top}px`;
-  // });
-=======
-  notes.forEach(note => {
-    const bbox = note.attrs.el.getElementsByClassName('vf-notehead')[0].getBBox();
-    const id = note.attrs.id;
-    let hit = document.getElementById(id);
-    if (hit === null) {
-      hit = document.createElement('div');
-      divHitArea.appendChild(hit);
-      hit.id = note.attrs.id;
-      hit.className = 'hitarea';
-      hit.addEventListener('mousedown', (e: MouseEvent) => {
-        const target = e.target as HTMLDivElement;
-        const note = notesById[target.id] as Vex.Flow.Note;
-        const midiEvent = note.getPlayNote().note.noteOn;
-        const noteOn = sequencer.createMidiEvent(0, 144, midiEvent.data1, midiEvent.data2)
-        // const instrument = midiEvent.track.instrument;
-        // console.log(instrument);
-        // instrument.processEvent(noteOn);
-        sequencer.processEvent(noteOn, 'TP00-PianoStereo');
-        colorStaveNote(note.attrs.el, 'red');
-        showToolTip(hit, midiEvent);
-      })
-      hit.addEventListener('mouseup', (e: MouseEvent) => {
-        // const target = e.target as HTMLDivElement;
-        // const note = notesById[target.id] as Vex.Flow.Note;
-        // const midiEvent = note.getPlayNote().note.noteOff;
-        // const noteOff = sequencer.createMidiEvent(10, 128, midiEvent.data1, 0)
-        // // console.log('up', noteOff);
-        // sequencer.processEvent(noteOff);
-        sequencer.stopProcessEvents();
-        colorStaveNote(note.attrs.el, 'black');
-        hideToolTip(hit);
-      })
+  }
+  for (let i = 0; i < noteheads.length; i++) {
+    const notehead = noteheads[i];
+    if (notehead !== null && notehead.firstChild !== null) {
+      (notehead.firstChild as SVGGElement).setAttribute('fill', color);
+      (notehead.firstChild as SVGGElement).setAttribute('stroke', color);
     }
-    hit.style.width = `${bbox.width}px`;
-    hit.style.height = `${bbox.height}px`;
-    hit.style.left = `${bbox.x + offset.left}px`;
-    hit.style.top = `${bbox.y + offset.top}px`;
-  });
->>>>>>> 16b6c40fdb4bafc4ee1aa49dae005f31edda1265
-
-}
-
-const toolTip = document.getElementById('tooltip');
-const showToolTip = (hit, data) => {
-  toolTip.style.display = 'block';
-  toolTip.style.left = hit.style.left;
-  toolTip.style.top = hit.style.top;
-  toolTip.innerHTML = data.noteName;
-}
-const hideToolTip = (hit) => {
-  toolTip.style.display = 'none';
-
-
-}
-
-const init2 = (notes: [Vex.Flow.StaveNote, Heartbeat.MIDINote][]) => {
-  const div = document.getElementById('app');
-  const divHitArea = document.getElementById('hitareas') as HTMLDivElement;
-
-  if (div !== null && divHitArea !== null) {
-    const renderer = new Renderer(div, Renderer.Backends.SVG);
-    const context = renderer.getContext() as Vex.Flow.SVGContext;
-    const formatter = new Formatter();
-    const render = () => {
-      renderScore({
-        width: window.innerWidth,
-        height: window.innerHeight,
-        renderer,
-        formatter,
-        context,
-        notes: notes.map(n => n[0]),
-        divHitArea,
-      });
-    }
-    window.addEventListener('resize', render);
-    render();
   }
 }
 
-const colorStaveNote = (el, color) => {
-  el.firstChild.firstChild.firstChild.setAttribute('stroke', color);
-  el.firstChild.firstChild.nextSibling.firstChild.setAttribute('stroke', color);
-  el.firstChild.firstChild.nextSibling.firstChild.setAttribute('fill', color);
+const addListeners = (noteMapping: NoteMapping, svgElementById: SVGElementById) => {
+  const hitAreas = document.getElementsByClassName('hitarea');
+  Array.from(hitAreas).forEach((hit: HTMLDivElement) => {
+    hit.addEventListener('mousedown', (e: MouseEvent) => {
+      const target = e.target as HTMLDivElement;
+      const note = noteMapping.MIDIToStave[target.id];
+      const midiEvent = note.noteOn;
+      const noteOn = sequencer.createMidiEvent(0, 144, midiEvent.data1, midiEvent.data2)
+      // const instrument = midiEvent.track.instrument;
+      // console.log(instrument);
+      // instrument.processEvent(noteOn);
+      sequencer.processEvent(noteOn, 'TP00-PianoStereo');
+      colorStaveNote(note.attrs.el, 'red');
+      showToolTip(hit, midiEvent);
+    })
+    hit.addEventListener('mouseup', (e: MouseEvent) => {
+      // const target = e.target as HTMLDivElement;
+      // const note = notesById[target.id] as Vex.Flow.Note;
+      // const midiEvent = note.getPlayNote().note.noteOff;
+      // const noteOff = sequencer.createMidiEvent(10, 128, midiEvent.data1, 0)
+      // // console.log('up', noteOff);
+      // sequencer.processEvent(noteOff);
+      sequencer.stopProcessEvents();
+      colorStaveNote(note.attrs.el, 'black');
+      hideToolTip(hit);
+    });
+  }
+};
+
+const toolTip = document.getElementById('tooltip');
+const showToolTip = (hit: HTMLDivElement, data: any) => {
+  if (toolTip !== null) {
+    toolTip.style.display = 'block';
+    toolTip.style.left = hit.style.left;
+    toolTip.style.top = hit.style.top;
+    toolTip.innerHTML = data.noteName;
+  }
+}
+
+const hideToolTip = (hit: HTMLDivElement) => {
+  if (toolTip !== null) {
+    toolTip.style.display = 'none';
+  }
 }
 
 const init = async () => {
-<<<<<<< HEAD
-  const song = await createSong();
+  const ppq = 960;
+  const numerator = 4;
+  const denominator = 4;
+  const padding = 10;
   const div = document.getElementById('app');
   const divHitArea = document.getElementById('hitareas') as HTMLDivElement;
+  const btnPlay = document.getElementById('play') as HTMLButtonElement;
+  const btnStop = document.getElementById('stop') as HTMLButtonElement;
 
   if (div !== null && divHitArea !== null) {
+    const song = await createSong();
     const renderer = new Renderer(div, Renderer.Backends.SVG);
-    renderer.resize(1000, 1000);
     const context = renderer.getContext() as Vex.Flow.SVGContext;
-    const formatter = new Formatter()
-    const bars = await convertToVexFlow(song).toPromise();
+    const formatter = new Formatter();
+    let staveNotes: Vex.Flow.StaveNote[];
+    let noteMapping: NoteMapping;
+    let svgElementById: SVGElementById;
 
-    const width = 200;
-    let y = 40;
-    bars.forEach((notes: [Heartbeat.MIDINote, []][], index: number) => {
-      // console.log('NOTES', index, notes);
-      if (index < 2) {
-        const alternate = index % 4;
-        let x = 0;
-        let stave;
-        if (alternate === 0) {
-          if (index !== 0) {
-            y += 80;
-          }
-          stave = new Stave(x, y, width + 50);
-          stave.addClef('treble').addTimeSignature('4/4');
-          stave.setContext(context).draw();
-        } else {
-          x = 50 + (alternate * width);
-          stave = new Stave(x, y, width);
-          stave.setContext(context).draw();
-        }
-        // console.log(index, alternate, y);
-        const voice = new Voice({ num_beats: 4, beat_value: 4 });
-        // const staveNoteData = notes.map(([midiNote, data]) => data);
-        const staveNotes = [];
-        notes.forEach((data, i) => {
-          // console.log(data);
-          const keys: string[] = [];
-          data.forEach((d, j) => {
-            // console.log(i, j, d);
-            keys.push(d[1][2]);
-          })
-          const duration = data[0][1][0];
-          const addDot = data[0][1][1];
-          console.log(keys, duration, addDot);
-          // const sn = new StaveNote({ clef: 'treble', keys, duration });
-          // console.log(duration);
-          const sn = new StaveNote({ clef: 'treble', keys, duration });
-          if (addDot) {
-            sn.addDot(0);
-          }
-          // if (i < 8) {
-          staveNotes.push(sn);
-          // }
-        });
-        console.log(staveNotes);
-        voice.addTickables(staveNotes);
-        formatter.joinVoices([voice]).format([voice], width);
-        voice.draw(context, stave);
+    const render = () => {
+      [staveNotes, noteMapping] = renderScore({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        ppq,
+        numerator,
+        denominator,
+        quantizeValue: 16,
+        padding,
+        renderer,
+        formatter,
+        context,
+        midiNotes: song.notes,
+      });
+      const offset = context.svg.getBoundingClientRect();
+      svgElementById = addInteractivity(staveNotes, divHitArea, offset);
+      // console.log(svgElementById, staveNotes, noteMapping);
+    }
+
+    render();
+    addListeners(noteMapping, svgElementById);
+
+    song.notes.forEach((n) => {
+      song.addEventListener('event', 'type = NOTE_ON', (event) => {
+        const noteId = event.midiNote.id;
+        const id = `${noteMapping.MIDIToStave[noteId]}`;
+        const el = svgElementById[id];
+        colorStaveNote(el, 'red');
+      });
+
+      song.addEventListener('event', 'type = NOTE_OFF', (event) => {
+        const noteId = event.midiNote.id;
+        const id = `${noteMapping.MIDIToStave[noteId]}`;
+        const el = svgElementById[id];
+        colorStaveNote(el, 'black');
+      });
+    });
+
+    window.addEventListener('resize', render);
+    song.addEventListener('stop', () => {
+      btnPlay.innerHTML = 'play';
+    });
+    song.addEventListener('play', () => {
+      btnPlay.innerHTML = 'pause';
+    });
+    song.addEventListener('end', () => {
+      btnPlay.innerHTML = 'play';
+    });
+
+    btnPlay.disabled = false;
+    btnStop.disabled = false;
+
+    btnPlay.addEventListener('click', () => {
+      if (song.playing) {
+        song.pause();
+      } else {
+        song.play();
       }
     });
+    btnStop.addEventListener('click', () => { song.stop() });
   }
-  // song.play();
-  // const notes = await init1();
-  // init2(notes);
-=======
-  const notes = await init1();
-  init2(notes);
-
-  const o = {};
-  notes.forEach((n) => {
-    const [staveNote, midiNote] = n;
-    // console.log(staveNote);
-    o[midiNote.id] = staveNote
-  });
-  console.log(o);
-  song.addEventListener('event', 'type = NOTE_ON', (event) => {
-    const noteId = event.midiNote.id;
-    // o[noteId].setStyle({ fillStyle: "red", strokeStyle: "red" });
-    const el = o[noteId].attrs.el;
-    colorStaveNote(el, 'red');
-  });
-
-  song.addEventListener('event', 'type = NOTE_OFF', (event) => {
-    const noteId = event.midiNote.id;
-    const el = o[noteId].attrs.el;
-    colorStaveNote(el, 'black');
-  });
-
-
->>>>>>> 16b6c40fdb4bafc4ee1aa49dae005f31edda1265
-  // const instrument = sequencer.getInstrument('TP03-Vibraphone');
-  // document.addEventListener('mouseup', () => {
-  //   instrument.allNotesOff();
-  // })
 }
 
 init();
