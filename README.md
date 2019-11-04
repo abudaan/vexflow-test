@@ -19,7 +19,7 @@ You can test a live version over here:
 
 ## install & run
 
-```
+```bash
 git clone git@github.com:abudaan/vexflow-test.git
 cd vexflow-test
 npm i
