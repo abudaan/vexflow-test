@@ -1,12 +1,12 @@
 {
-  "name": "groovy3",
+  "name": "vexfow-test",
   "version": "1.0.0",
-  "description": "Groovy React Rebuild",
+  "description": "test interactive score with heartbeat and VexFlow",
   "main": "index.js",
   "dependencies": {
     "fetch-helpers": "^9.0.0",
     "glamor": "^2.20.40",
-    "heartbeat-sequencer": "file:../heartbeat/",
+    "heartbeat-sequencer": "heartbeat-sequencer",
     "jzz": "^0.7.9",
     "ramda": "^0.26.1",
     "rxjs": "^6.5.2",
@@ -31,7 +31,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint --fix",
     "watch": "npm run clean && npm run copy && parcel --port 3000 --no-hmr ./src/index.html",
-    "build": "parcel build --no-source-maps --out-dir public/ --public-url /vexflow ./src/index.html",
+    "build": "parcel build --no-source-maps --out-dir public/ --public-url /vexflow-test/public ./src/index.html",
     "copy": "cp -r ./assets ./dist/assets",
     "clean": "rm -rf .cache/* && rm -rf dist/*"
   },
