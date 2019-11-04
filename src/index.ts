@@ -24,7 +24,7 @@ const init = async (settings: Settings) => {
   }
   const song = await createSong(ppq, numerator, denominator);
 
-  const render = (fullRender: boolean = false) => {
+  const render = () => {
     const [staveNotes, noteMapping, context] = renderScore({
       width: window.innerWidth,
       height: window.innerHeight,
@@ -36,35 +36,33 @@ const init = async (settings: Settings) => {
       div,
       midiNotes: song.notes,
     });
-    if (fullRender === true) {
-      // use `fullRender=true` only when the heartbeat song has changed, or for the first call to render
-      const offset = context.svg.getBoundingClientRect();
-      const [svgElementById, hitAreaById] = addHitAreas(staveNotes, divHitArea, offset);
-      // console.log(svgElementById, staveNotes, noteMapping);
-      addListeners(hitAreaById, noteMapping, tooltip);
+    // add or reposition hitareas
+    const offset = context.svg.getBoundingClientRect();
+    const [svgElementById, hitAreaById] = addHitAreas(staveNotes, divHitArea, offset);
 
-      // connect all note-on and note-off events to the stavenote in the score
-      song.notes.forEach((n) => {
-        song.addEventListener('event', 'type = NOTE_ON', (event) => {
-          const noteId = event.midiNote.id;
-          const el = noteMapping.staveNoteByMIDINoteId[noteId].attrs.el;
-          colorStaveNote(el, 'red');
-        });
+    // setup a tooltip and note playback per stavenote
+    addListeners(hitAreaById, noteMapping, tooltip);
 
-        song.addEventListener('event', 'type = NOTE_OFF', (event) => {
-          const noteId = event.midiNote.id;
-          const el = noteMapping.staveNoteByMIDINoteId[noteId].attrs.el;
-          colorStaveNote(el, 'black');
-        });
+    // connect all note-on and note-off events to the stavenote in the score
+    song.notes.forEach((n) => {
+      song.addEventListener('event', 'type = NOTE_ON', (event) => {
+        const noteId = event.midiNote.id;
+        const el = noteMapping.staveNoteByMIDINoteId[noteId].attrs.el;
+        colorStaveNote(el, 'red');
       });
-    }
+
+      song.addEventListener('event', 'type = NOTE_OFF', (event) => {
+        const noteId = event.midiNote.id;
+        const el = noteMapping.staveNoteByMIDINoteId[noteId].attrs.el;
+        colorStaveNote(el, 'black');
+      });
+    });
   }
   // the intial render
-  render(true);
+  render();
 
-  // on resize we only have to render the VexFlow score, we don't need to add the listeners so we
-  // pass `false` to the render call
-  window.addEventListener('resize', () => { render(false); });
+  // a full re-render after resize is required
+  window.addEventListener('resize', () => { render(); });
 
   // add the regular song controls
   song.addEventListener('stop', () => {

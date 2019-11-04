@@ -113,14 +113,28 @@ export const addHitAreas = (
   return [svgElementById, hitAreaById];
 }
 
+let renderer: Vex.Flow.Renderer;
+let context: Vex.Flow.SVGContext;
+let formatter: Vex.Flow.Formatter;
+const initScore = (div: HTMLDivElement) => {
+  if (!renderer) {
+    renderer = new Renderer(div, Renderer.Backends.SVG);
+    context = renderer.getContext() as Vex.Flow.SVGContext;
+    formatter = new Formatter();
+  }
+  return {
+    renderer,
+    formatter,
+    context
+  }
+}
+
 // render the VexFlow score using notes from the heartbeat song
 export const renderScore = ({
   width, height, padding, midiNotes,
   quantizeValue, ppq, numerator, denominator, div,
 }: RenderScoreArgs): [Vex.Flow.StaveNote[], NoteMapping, Vex.Flow.SVGContext] => {
-  const renderer = new Renderer(div, Renderer.Backends.SVG);
-  const context = renderer.getContext() as Vex.Flow.SVGContext;
-  const formatter = new Formatter();
+  const { renderer, formatter, context } = initScore(div);
   renderer.resize(width, height);
   context.clear();
   const stave = new Stave(0, 40, width - (padding * 2));

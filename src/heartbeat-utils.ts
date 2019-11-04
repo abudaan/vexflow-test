@@ -1,4 +1,3 @@
-// utils used by ./actions/actions.ts
 import sequencer from 'heartbeat-sequencer';
 // import { isNil } from 'ramda';
 
