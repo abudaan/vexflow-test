@@ -1,196 +1,93 @@
-import sequencer from 'heartbeat-sequencer';
-import Vex from 'vexflow';
-import { renderScore, addInteractivity, NoteMapping, SVGElementById, HitAreaListener, HitAreaById } from './create-score';
-import { loadJSON, addAssetPack } from './action-utils';
+import { createSong } from './create-song';
+import { renderScore, addHitAreas } from './create-score';
+import { colorStaveNote, addListeners } from './score-interactivity';
 
-const {
-  Renderer,
-  Formatter,
-} = Vex.Flow;
-let song: Heartbeat.Song;
-
-const createSong = async (ppq: number, numerator: number, denominator: number) => {
-  await sequencer.ready();
-  song = sequencer.createSong({ bars: 1 });
-  const track = sequencer.createTrack('piano');
-  const part = sequencer.createPart();
-  // const srcName = 'TP03-Vibraphone';
-  const srcName = 'TP00-PianoStereo';
-  // let url = `https://groovy3.heartbeatjs.org/assets/groovy-instruments/mono-mp3-112/${srcName}.mp3.112.json`;
-  let url = `assets/${srcName}.mp3.json`;
-  if (sequencer.browser === 'firefox') {
-    // url = `/assets/groovy-instruments/mono-22k-q1/${srcName}.json`;
-    // url = `https://heartbeatjs.org/groovy-instruments/mono-22k-q1/${srcName}.json`;
-    url = `assets/${srcName}.ogg.json`;
-  }
-  const json = await loadJSON(url);
-  await addAssetPack(json);
-  const events = [
-    sequencer.createMidiEvent(0, 144, 60, 100),
-    sequencer.createMidiEvent(ppq * 1, 128, 60, 0),
-
-    sequencer.createMidiEvent(ppq * 1, 144, 64, 100),
-    sequencer.createMidiEvent(ppq * 2, 128, 64, 0),
-
-    sequencer.createMidiEvent(960 * 2, 144, 67, 100),
-    sequencer.createMidiEvent(960 * 4, 128, 67, 0),
-  ];
-  part.addEvents(events);
-  track.setInstrument(srcName);
-  track.addPart(part);
-  song.addTrack(track);
-  song.update();
-  return song;
+const settings = {
+  ppq: 960,
+  numerator: 4,
+  denominator: 4,
+  padding: 10,
+  quantizeValue: 16,
 }
+type Settings = typeof settings;
 
-
-const colorStaveNote = (el: SVGGElement, color: string) => {
-  const stems = el.getElementsByClassName('vf-stem');
-  const noteheads = el.getElementsByClassName('vf-notehead');
-  // console.log(stem, notehead);
-  for (let i = 0; i < stems.length; i++) {
-    const stem = stems[i];
-    if (stem !== null && stem.firstChild !== null) {
-      (stem.firstChild as SVGGElement).setAttribute('fill', color);
-      (stem.firstChild as SVGGElement).setAttribute('stroke', color);
-    }
-  }
-  for (let i = 0; i < noteheads.length; i++) {
-    const notehead = noteheads[i];
-    if (notehead !== null && notehead.firstChild !== null) {
-      (notehead.firstChild as SVGGElement).setAttribute('fill', color);
-      (notehead.firstChild as SVGGElement).setAttribute('stroke', color);
-    }
-  }
-}
-
-const addListeners = (hitAreas: HitAreaById, noteMapping: NoteMapping) => {
-  Object.entries(hitAreas).forEach(([id, hit]: [string, HTMLDivElement]) => {
-    hit.addEventListener('mousedown', (e: MouseEvent) => {
-      const target = e.target as HTMLDivElement;
-      const midiNote = noteMapping.midiNoteByStaveNoteId[target.id];
-      const staveNote = noteMapping.staveNoteByMIDINoteId[midiNote.id];
-      const midiEvent = midiNote.noteOn;
-      const noteOn = sequencer.createMidiEvent(0, 144, midiEvent.data1, midiEvent.data2)
-      // const instrument = midiEvent.track.instrument;
-      // console.log(instrument);
-      // instrument.processEvent(noteOn);
-      sequencer.processEvent(noteOn, 'TP00-PianoStereo');
-      colorStaveNote(staveNote.attrs.el, 'red');
-      showToolTip(hit, midiEvent);
-    })
-    hit.addEventListener('mouseup', (e: MouseEvent) => {
-      const target = e.target as HTMLDivElement;
-      const midiNote = noteMapping.midiNoteByStaveNoteId[target.id];
-      const staveNote = noteMapping.staveNoteByMIDINoteId[midiNote.id];
-      // const midiEvent = midiNote.noteOn;
-      // const noteOff = sequencer.createMidiEvent(10, 128, midiEvent.data1, 0)
-      // sequencer.processEvent(noteOff, '');
-      sequencer.stopProcessEvents();
-      colorStaveNote(staveNote.attrs.el, 'black');
-      hideToolTip(hit);
-    });
-  });
-};
-
-const toolTip = document.getElementById('tooltip');
-const showToolTip = (hit: HTMLDivElement, data: Heartbeat.MIDIEvent) => {
-  if (toolTip !== null) {
-    toolTip.style.display = 'block';
-    toolTip.style.left = hit.style.left;
-    toolTip.style.top = hit.style.top;
-    toolTip.innerHTML = data.noteName;
-  }
-}
-
-const hideToolTip = (hit: HTMLDivElement) => {
-  if (toolTip !== null) {
-    toolTip.style.display = 'none';
-  }
-}
-
-const init = async () => {
-  const ppq = 960;
-  const numerator = 4;
-  const denominator = 4;
-  const padding = 10;
-  const div = document.getElementById('app');
+const init = async (settings: Settings) => {
+  const { ppq, numerator, denominator, padding, quantizeValue } = settings;
+  const div = document.getElementById('app') as HTMLDivElement;
   const divHitArea = document.getElementById('hitareas') as HTMLDivElement;
+  const tooltip = document.getElementById('tooltip') as HTMLDivElement;
   const btnPlay = document.getElementById('play') as HTMLButtonElement;
   const btnStop = document.getElementById('stop') as HTMLButtonElement;
 
-  if (div !== null && divHitArea !== null) {
-    const song = await createSong(ppq, numerator, denominator);
-    const renderer = new Renderer(div, Renderer.Backends.SVG);
-    const context = renderer.getContext() as Vex.Flow.SVGContext;
-    const formatter = new Formatter();
-    let staveNotes: Vex.Flow.StaveNote[];
-    let noteMapping: NoteMapping = {
-      midiNoteByStaveNoteId: {},
-      staveNoteByMIDINoteId: {},
-    };
-    let svgElementById: SVGElementById = {};
-    let hitAreaById: HitAreaById = {};
-
-    const render = () => {
-      [staveNotes, noteMapping] = renderScore({
-        width: window.innerWidth,
-        height: window.innerHeight,
-        ppq,
-        numerator,
-        denominator,
-        quantizeValue: 16,
-        padding,
-        renderer,
-        formatter,
-        context,
-        midiNotes: song.notes,
-      });
-      const offset = context.svg.getBoundingClientRect();
-      [svgElementById, hitAreaById] = addInteractivity(staveNotes, divHitArea, offset);
-      // console.log(svgElementById, staveNotes, noteMapping);
-    }
-
-    render();
-    addListeners(hitAreaById, noteMapping);
-
-    song.notes.forEach((n) => {
-      song.addEventListener('event', 'type = NOTE_ON', (event) => {
-        const noteId = event.midiNote.id;
-        const el = noteMapping.staveNoteByMIDINoteId[noteId].attrs.el;
-        colorStaveNote(el, 'red');
-      });
-
-      song.addEventListener('event', 'type = NOTE_OFF', (event) => {
-        const noteId = event.midiNote.id;
-        const el = noteMapping.staveNoteByMIDINoteId[noteId].attrs.el;
-        colorStaveNote(el, 'black');
-      });
-    });
-
-    window.addEventListener('resize', render);
-    song.addEventListener('stop', () => {
-      btnPlay.innerHTML = 'play';
-    });
-    song.addEventListener('play', () => {
-      btnPlay.innerHTML = 'pause';
-    });
-    song.addEventListener('end', () => {
-      btnPlay.innerHTML = 'play';
-    });
-
-    btnPlay.disabled = false;
-    btnStop.disabled = false;
-
-    btnPlay.addEventListener('click', () => {
-      if (song.playing) {
-        song.pause();
-      } else {
-        song.play();
-      }
-    });
-    btnStop.addEventListener('click', () => { song.stop() });
+  if (div === null || divHitArea === null || tooltip === null) {
+    return;
   }
+  const song = await createSong(ppq, numerator, denominator);
+
+  const render = (fullRender: boolean = false) => {
+    const [staveNotes, noteMapping, context] = renderScore({
+      width: window.innerWidth,
+      height: window.innerHeight,
+      ppq,
+      numerator,
+      denominator,
+      quantizeValue,
+      padding,
+      div,
+      midiNotes: song.notes,
+    });
+    if (fullRender === true) {
+      // use `fullRender=true` only when the heartbeat song has changed, or for the first call to render
+      const offset = context.svg.getBoundingClientRect();
+      const [svgElementById, hitAreaById] = addHitAreas(staveNotes, divHitArea, offset);
+      // console.log(svgElementById, staveNotes, noteMapping);
+      addListeners(hitAreaById, noteMapping, tooltip);
+
+      // connect all note-on and note-off events to the stavenote in the score
+      song.notes.forEach((n) => {
+        song.addEventListener('event', 'type = NOTE_ON', (event) => {
+          const noteId = event.midiNote.id;
+          const el = noteMapping.staveNoteByMIDINoteId[noteId].attrs.el;
+          colorStaveNote(el, 'red');
+        });
+
+        song.addEventListener('event', 'type = NOTE_OFF', (event) => {
+          const noteId = event.midiNote.id;
+          const el = noteMapping.staveNoteByMIDINoteId[noteId].attrs.el;
+          colorStaveNote(el, 'black');
+        });
+      });
+    }
+  }
+  // the intial render
+  render(true);
+
+  // on resize we only have to render the VexFlow score, we don't need to add the listeners so we
+  // pass `false` to the render call
+  window.addEventListener('resize', () => { render(false); });
+
+  // add the regular song controls
+  song.addEventListener('stop', () => {
+    btnPlay.innerHTML = 'play';
+  });
+  song.addEventListener('play', () => {
+    btnPlay.innerHTML = 'pause';
+  });
+  song.addEventListener('end', () => {
+    btnPlay.innerHTML = 'play';
+  });
+
+  btnPlay.disabled = false;
+  btnStop.disabled = false;
+
+  btnPlay.addEventListener('click', () => {
+    if (song.playing) {
+      song.pause();
+    } else {
+      song.play();
+    }
+  });
+  btnStop.addEventListener('click', () => { song.stop() });
 }
 
-init();
+init(settings);

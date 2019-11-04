@@ -27,7 +27,7 @@ const loadArrayBuffer = (url: string) => fetch(url)
 // const initSequencer = () => sequencer.ready();
 const initSequencer = async () => {
   await sequencer.ready();
-  console.log(sequencer)
+  // console.log(sequencer)
 }
 
 const getBrowser = () => sequencer.browser;
@@ -39,8 +39,8 @@ const getLoadedMIDIFiles = () =>
 
 const getLoadedInstruments = () =>
   sequencer.getInstruments()
-    .map((i: Heartbeat.Instrument, index: number) => [index, i.name])
-    .filter((t: [number, string]) => t[1] !== 'metronome');
+    .map((i: Heartbeat.Instrument, index: number): [number, string] => [index, i.name])
+    .filter((t) => t[1] !== 'metronome');
 
 
 const addMIDIFile = (url: string): Promise<Heartbeat.MIDIFileJSON> => new Promise((resolve) => {

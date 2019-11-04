@@ -1,4 +1,5 @@
 import Vex from 'vexflow';
+import { RenderScoreArgs, NoteMapping, SVGElementById, HitAreaById } from './types';
 const {
   Renderer,
   Stave,
@@ -7,20 +8,6 @@ const {
   Formatter,
 } = Vex.Flow;
 
-export type RenderScoreArgs = {
-  width: number
-  height: number
-  padding: number
-  ppq: number
-  numerator: number
-  denominator: number
-  quantizeValue: number
-  context: Vex.Flow.SVGContext
-  renderer: Vex.Flow.Renderer
-  formatter: Vex.Flow.Formatter
-  midiNotes: Heartbeat.MIDINote[]
-}
-
 const roundToStep = (number: number, increment: number, offset: number = 0): number => {
   return Math.ceil((number - offset) / increment) * increment + offset;
 }
@@ -28,6 +15,10 @@ const roundToStep = (number: number, increment: number, offset: number = 0): num
 const getDuration = (roundedTicks: number): string => {
   // console.log(roundedTicks);
   switch (roundedTicks) {
+    case 0.0625:
+      return '64';
+    case 0.09375:
+      return '64d';
     case 0.125:
       return '32';
     case 0.1875:
@@ -56,15 +47,6 @@ const getDuration = (roundedTicks: number): string => {
       return 'q';
   }
 };
-
-export type NoteMapping = {
-  midiNoteByStaveNoteId: { [id: string]: Heartbeat.MIDINote }
-  staveNoteByMIDINoteId: { [id: string]: Vex.Flow.StaveNote }
-}
-
-export type SVGElementById = { [id: string]: SVGGElement }
-export type HitAreaById = { [id: string]: HTMLDivElement }
-
 
 export const convertMIDINoteToStaveNote = (
   notes: Heartbeat.MIDINote[],
@@ -99,9 +81,8 @@ export const convertMIDINoteToStaveNote = (
   return [staveNotes, notesMap];
 }
 
-export type HitAreaListener = (id: string, hitElement: HTMLDivElement, staveNote: Vex.Flow.StaveNote) => void;
-
-export const addInteractivity = (
+// add a hitarea for every stavenote -> run this after the score has been rendered!
+export const addHitAreas = (
   notes: Vex.Flow.StaveNote[],
   divHitArea: HTMLDivElement,
   offset: { left: number, top: number },
@@ -132,11 +113,14 @@ export const addInteractivity = (
   return [svgElementById, hitAreaById];
 }
 
-
+// render the VexFlow score using notes from the heartbeat song
 export const renderScore = ({
-  renderer, formatter, width, height, padding, midiNotes,
-  quantizeValue, ppq, numerator, denominator, context
-}: RenderScoreArgs): [Vex.Flow.StaveNote[], NoteMapping] => {
+  width, height, padding, midiNotes,
+  quantizeValue, ppq, numerator, denominator, div,
+}: RenderScoreArgs): [Vex.Flow.StaveNote[], NoteMapping, Vex.Flow.SVGContext] => {
+  const renderer = new Renderer(div, Renderer.Backends.SVG);
+  const context = renderer.getContext() as Vex.Flow.SVGContext;
+  const formatter = new Formatter();
   renderer.resize(width, height);
   context.clear();
   const stave = new Stave(0, 40, width - (padding * 2));
@@ -151,5 +135,5 @@ export const renderScore = ({
   formatter.joinVoices([voice]).format([voice], width - (padding * 2));
   voice.draw(context, stave);
 
-  return [staveNotes, notesMap];
+  return [staveNotes, notesMap, context];
 }

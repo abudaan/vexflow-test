@@ -22,8 +22,6 @@
   "exclude": [
     "dist",
     "node_modules",
-    ".cache",
-    "src/worker.js",
-    "heartbeat"
+    ".cache"
   ]
 }
