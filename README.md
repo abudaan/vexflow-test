@@ -14,7 +14,7 @@ Also we can highlight the note in the score as soon as heartbeat's playhead reac
 
 You can test a live version over here:
 
-<https://heartbeatjs.org/vexflow/>
+<https://heartbeatjs.org/prototypes/vexflow/>
 
 
 ## install & run
